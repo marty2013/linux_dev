@@ -1,0 +1,13 @@
+IDM project
+Implementation of derivative models as per the book
+"Implementing Derivative Models" by Clewlow and Strickland.
+
+c++ code base for the most part based on pseudo code examples
+provided in the text.
+
+headers: cpp header files
+cpp: cpp source files
+lib: cpp libary files
+
+
+
