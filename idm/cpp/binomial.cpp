@@ -5,6 +5,56 @@
 
 using namespace std;
 
+class Pricer
+{
+  public:
+    virtual double price() const = 0;
+};
+
+class European_Binomial: public Pricer
+{
+  private:
+    double mS;
+    double mK;
+    double mT;
+    double mr;
+    int mN;
+    double mu;
+    double md;
+
+  public:
+     European_Binomial( double S, double K, double T, double r, int N, double u, double d)
+       :mS{S}, mK{K}, mT{T}, mr{r}, mN{N}, mu{u}, md{d}
+     {}
+
+     double price() const;
+};
+
+double European_Binomial::price() const
+{
+  // pre-compute consts
+  double dt = mT/mN;
+  double p = (exp(mr * dt) - md)/( mu - md);
+  double disc = exp(-mr*dt);
+
+  // initialise asset prices at maturity time step N
+  vector<double> St;
+  St.push_back(mS * pow(md, mN));
+  for( int j = 1; j <= mN; j++)
+    St.push_back(St[j-1] * mu/md);
+
+  // initialise option values as maturity
+  vector<double> C;
+  for( int j = 0; j <= mN; j++)
+    C.push_back(fmax( 0.0, St[j] - mK));
+
+  for( int i = (mN-1); i >= 0; i--)
+    for( int j = 0; j <= i; j++)
+      C[j] = disc * ( p * C[j+1] + (1-p) * C[j]);
+
+  return C[0];
+}
+
 int main()
 {
   // inputs
@@ -17,26 +67,8 @@ int main()
   constexpr float u = 1.1;
   constexpr float d = 1.0/u;
 
-  // pre-compute consts
-  constexpr float dt = T/N;
-  constexpr float p = (exp(r * dt) - d)/( u - d);
-  constexpr float disc = exp(-r*dt);
+  European_Binomial bin_pricer( S, K, T, r, N, u, d);
 
-  // initialise asset prices at maturity time step N
-  vector<float> St;
-  St.push_back(S * pow(d, N));
-  for( int j = 1; j <= N; j++)
-    St.push_back(St[j-1] * u/d);
-
-  // initialise option values as maturity
-  vector<float> C;
-  for( int j = 0; j <= N; j++)
-    C.push_back(fmax( 0.0, St[j] - K));
-
-  for( int i = (N-1); i >= 0; i--)
-    for( int j = 0; j <= i; j++)
-      C[j] = disc * ( p * C[j+1] + (1-p) * C[j]);
-
-  cout << "European Call Price: " + to_string(C[0]) + '\n';
+  cout << "European Call Price: " + to_string(bin_pricer.price()) + '\n';
 
 }
