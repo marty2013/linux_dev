@@ -4,16 +4,24 @@
 #include <string>
 #include <memory>
 
-using namespace std;
-
 class Contract
 {
+  public:
+    virtual ~Contract() {}
 };
 
 class Pricer
 {
+  protected:
+    std::shared_ptr<Contract> mContract;
+
   public:
+    Pricer(std::shared_ptr<Contract> contract)
+      :mContract{contract}
+    {}
+
     virtual double price() const = 0;
+    virtual ~Pricer() {}
 };
 
 class European: public Contract
@@ -38,14 +46,13 @@ class European: public Contract
 class European_Binomial_Pricer: public Pricer
 {
   private:
-    shared_ptr<const European> mContract;
     int mN;
     double mu;
     double md;
 
   public:
-    European_Binomial_Pricer(shared_ptr<const European> contract, int N, double u, double d)
-      : mContract(contract), mN{N}, mu{u}, md{d}
+    European_Binomial_Pricer(std::shared_ptr<European> contract, int N, double u, double d)
+      : Pricer(contract), mN{N}, mu{u}, md{d}
     {}
 
     double price() const;
@@ -53,11 +60,14 @@ class European_Binomial_Pricer: public Pricer
 
 double European_Binomial_Pricer::price() const
 {
+
+  auto contract = dynamic_cast<European*>(mContract.get());
+
   // get contract data
-  auto S = mContract->get_spot_price();
-  auto K = mContract->get_strike_price();
-  auto T = mContract->get_time_to_maturity();
-  auto r = mContract->get_interest_rate();
+  auto S = contract->get_spot_price();
+  auto K = contract->get_strike_price();
+  auto T = contract->get_time_to_maturity();
+  auto r = contract->get_interest_rate();
 
   // pre-compute consts
   double dt = T/mN;
@@ -65,13 +75,13 @@ double European_Binomial_Pricer::price() const
   double disc = exp(-r*dt);
 
   // initialise asset prices at maturity time step N
-  vector<double> St;
+  std::vector<double> St;
   St.push_back(S * pow(md, mN));
   for( int j = 1; j <= mN; j++)
     St.push_back(St[j-1] * mu/md);
 
   // initialise option values as maturity
-  vector<double> C;
+  std::vector<double> C;
   for( int j = 0; j <= mN; j++)
     C.push_back(fmax( 0.0, St[j] - K));
 
@@ -94,10 +104,9 @@ int main()
   constexpr float u = 1.1;
   constexpr float d = 1.0/u;
 
-  auto contract = make_shared<const European>(European( S, K, T, r));
+  auto contract = std::make_shared<European>(European( S, K, T, r));
 
   European_Binomial_Pricer pricer(contract, N, u, d);
 
-  cout << "European Call Price: " + to_string(pricer.price()) + '\n';
-
+  std::cout << "European Call Price: " + std::to_string(pricer.price()) + '\n';
 }
