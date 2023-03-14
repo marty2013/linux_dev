@@ -1,96 +1,11 @@
 #include <iostream>
-#include <vector>
-#include <cmath>
 #include <string>
 #include <memory>
 
-class Contract
-{
-  public:
-    virtual ~Contract() {}
-};
+#include "european.h"
+#include "european_bin_pricer.h"
 
-class Pricer
-{
-  protected:
-    std::shared_ptr<Contract> mContract;
-
-  public:
-    Pricer(std::shared_ptr<Contract> contract)
-      :mContract{contract}
-    {}
-
-    virtual double price() const = 0;
-    virtual ~Pricer() {}
-};
-
-class European: public Contract
-{
-  private:
-    double mS;
-    double mK;
-    double mT;
-    double mr;
-
-  public:
-    European( double S, double K, double T, double r)
-      :mS{S}, mK{K}, mT{T}, mr{r}
-    {}
-    
-    double get_spot_price() const { return mS;}
-    double get_strike_price() const { return mK;}
-    double get_time_to_maturity() const { return mT;}
-    double get_interest_rate() const { return mr;}
-};
-
-class European_Binomial_Pricer: public Pricer
-{
-  private:
-    int mN;
-    double mu;
-    double md;
-
-  public:
-    European_Binomial_Pricer(std::shared_ptr<European> contract, int N, double u, double d)
-      : Pricer(contract), mN{N}, mu{u}, md{d}
-    {}
-
-    double price() const;
-};
-
-double European_Binomial_Pricer::price() const
-{
-
-  auto contract = dynamic_cast<European*>(mContract.get());
-
-  // get contract data
-  auto S = contract->get_spot_price();
-  auto K = contract->get_strike_price();
-  auto T = contract->get_time_to_maturity();
-  auto r = contract->get_interest_rate();
-
-  // pre-compute consts
-  double dt = T/mN;
-  double p = (exp(r * dt) - md)/( mu - md);
-  double disc = exp(-r*dt);
-
-  // initialise asset prices at maturity time step N
-  std::vector<double> St;
-  St.push_back(S * pow(md, mN));
-  for( int j = 1; j <= mN; j++)
-    St.push_back(St[j-1] * mu/md);
-
-  // initialise option values as maturity
-  std::vector<double> C;
-  for( int j = 0; j <= mN; j++)
-    C.push_back(fmax( 0.0, St[j] - K));
-
-  for( int i = (mN-1); i >= 0; i--)
-    for( int j = 0; j <= i; j++)
-      C[j] = disc * ( p * C[j+1] + (1-p) * C[j]);
-
-  return C[0];
-}
+using namespace idm;
 
 int main()
 {
