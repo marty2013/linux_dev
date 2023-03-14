@@ -27,11 +27,12 @@ namespace idm
     for( int j = 1; j <= mN; j++)
       St.push_back(St[j-1] * mu/md);
 
-    // initialise option values as maturity
+    // initialise option values at maturity
     std::vector<double> C;
     for( int j = 0; j <= mN; j++)
       C.push_back(fmax( 0.0, St[j] - K));
 
+    // backtrack through the tree
     for( int i = (mN-1); i >= 0; i--)
       for( int j = 0; j <= i; j++)
         C[j] = disc * ( p * C[j+1] + (1-p) * C[j]);
